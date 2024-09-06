@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hash бутфорсер</title>
+<style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            margin-bottom: 20px;
+        }
+        input, select, button {
+            margin: 10px 0;
+            padding: 10px;
+            width: 300px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        #console {
+            margin-top: 20px;
+            width: 300px;
+            height: 150px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #fff;
+            padding: 10px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        #progressBar {
+            width: 300px;
+            height: 20px;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        #progressBarFill {
+            height: 100%;
+            background-color: #4caf50;
+            width: 0%;
+            transition: width 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Hash бутфорсер</h1>
+
+    <input type="text" placeholder="Хэш" id="hashInput">
+    <input type="text" placeholder="Ссылка на файл с паролями" id="passwordFileInput">
+    <select id="algorithmSelect">
+        <option value="md5">MD5</option>
+        <option value="sha1">SHA1</option>
+		<option value="sha256">SHA256</option>
+		<option value="sha384">SHA384</option>
+		<option value="sha512">SHA512</option>
+    </select>
+    <button id="startButton">Начать</button>
+    <div id="console">
+        Консольное окно
+    </div>
+    <div id="progressBar">
+        <div id="progressBarFill"></div>
+    </div>
+
+    <script>
+        const hashInput = document.getElementById('hashInput');
+        const passwordFileInput = document.getElementById('passwordFileInput');
+        const algorithmSelect = document.getElementById('algorithmSelect');
+        const startButton = document.getElementById('startButton');
+        const consoleOutput = document.getElementById('console');
+        const progressBarFill = document.getElementById('progressBarFill');
+
+        startButton.addEventListener('click', async () => {
+            const hash = hashInput.value;
+            const passwordFileUrl = passwordFileInput.value;
+            const algorithm = algorithmSelect.value;
+
+            consoleOutput.textContent = 'Выполняется...';
+            progressBarFill.style.width = '0%'; 
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/crack', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ hash, passwordFileUrl, algorithm })
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value, { stream: true });
+
+                    // Извлекаем количество проверенных строк
+                    const progressMatch = chunk.match(/Проверено:\s+(\d+)\/(\d+)/);
+                    if (progressMatch) {
+                        const checked = parseInt(progressMatch[1], 10);
+                        const total = parseInt(progressMatch[2], 10);
+                        const progress = (checked / total) * 100; 
+                        progressBarFill.style.width = progress + '%';
+                    }
+
+                    consoleOutput.textContent = chunk;
+                    consoleOutput.scrollTop = consoleOutput.scrollHeight;
+                }
+
+            } catch (error) {
+                consoleOutput.textContent = `Ошибка: ${error.message}`;
+            }
+        });
+    </script>
+
+</body>
+</html>
