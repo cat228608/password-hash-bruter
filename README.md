@@ -27,3 +27,7 @@ A web application for decrypting passwords from different hashes such as md5, sh
 
 ```bash
 pip install flask requests
+
+##Скриншоты
+![image](https://github.com/user-attachments/assets/86ee896e-4812-469f-9785-806b13aba24e)
+
